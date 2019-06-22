@@ -3,6 +3,7 @@
 namespace Libraries;
 
 use Libraries\ODataQueryBuilder\Helpers\ODataFilterBuilder;
+use Libraries\ODataQueryBuilder\Helpers\ODataComplexFilterBuilder;
 use Libraries\ODataQueryBuilder\Helpers\ODataOrderByBuilder;
 
 /**
@@ -15,6 +16,7 @@ class ODataQueryBuilder {
     private $entitySet = '';
     private $entityKey = '';
     private $filters = [];
+    private $complexFilterStrings = [];
     private $selectedProperties = '';
     private $expands = '';
     private $orderBy = '';
@@ -147,6 +149,10 @@ class ODataQueryBuilder {
         return new ODataFilterBuilder($this, $leftOperand, 'and');
     }
 
+    public function filterComplex(): ODataComplexFilterBuilder {
+        return new ODataComplexFilterBuilder($this);
+    }
+
     /**
      * Manually add a filter. Used by the filter builder class to support the fluent nature of this library. 
      * Can be used by anyone who does not like the fluent behavior of this library.
@@ -171,6 +177,12 @@ class ODataQueryBuilder {
         $filter = $leftOperand . ' ' . $operator . ' \'' . $rightOperand . '\'';
         
         $this->filters[$filter] = $andOr;
+
+        return $this;
+    }
+
+    public function addComplexFilterString(string $complexFilterString): ODataQueryBuilder {
+        $this->complexFilterStrings[] = $complexFilterString;
 
         return $this;
     }
@@ -341,36 +353,23 @@ class ODataQueryBuilder {
         $query = '';
         $hasOption = false;
 
-        $i = 0;
-        $useParentheses = count($this->filters) > 2 ? true : false;
+        foreach ($this->complexFilterStrings as $complexFilter) {
+            if (!$hasOption) {
+                $hasOption = true;
+                $query .= '$filter=';
+            }
+
+            $query .= $this->encodeUrl ? urlencode($complexFilter) : $complexFilter;
+        }
+        
         foreach ($this->filters as $filter => $andOr) {
             if (!$hasOption) {
                 $hasOption = true;
                 $query .= '$filter=';
-
-                if ($useParentheses) {
-                    $query .= '(';
-                }
-
                 $query .= $this->encodeUrl ? urlencode($filter) : $filter;
             }
             else {
-                if ($useParentheses) {
-                    if ($i % 2 === 1) {
-                        $query .= $this->encodeUrl ? urlencode(' ' . $andOr . ' ' .$filter . ')') : ' ' . $andOr . ' ' .$filter . ')';
-                    }
-                    else {
-                        $query .= $this->encodeUrl ? urlencode(' ' . $andOr . ' (' .$filter) : ' ' . $andOr . ' (' .$filter;
-                    }
-                } else {
-                    $query .= $this->encodeUrl ? urlencode(' ' . $andOr . ' ' .$filter) : ' ' . $andOr . ' ' .$filter;
-                }
-            }
-
-            $i++;
-
-            if ($useParentheses && $i === count($this->filters) && $i % 2 === 1) {
-                $query .= ')';
+                $query .= $this->encodeUrl ? urlencode(' ' . $andOr . ' ' .$filter) : ' ' . $andOr . ' ' .$filter;
             }
         }
 
