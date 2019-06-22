@@ -18,37 +18,37 @@ class ODataFilterBuilder {
         $this->andOr = $andOr;
     }
 
-    public function equals(string $rightOperand): ODataQueryBuilder {
+    public function equals($rightOperand): ODataQueryBuilder {
         $this->oDataQueryBuilder->addFilter($this->leftOperand, 'eq', $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
 
-    public function notEquals(string $rightOperand): ODataQueryBuilder {
+    public function notEquals($rightOperand): ODataQueryBuilder {
         $this->oDataQueryBuilder->addFilter($this->leftOperand, 'ne', $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
 
-    public function greaterThan(string $rightOperand): ODataQueryBuilder {
+    public function greaterThan($rightOperand): ODataQueryBuilder {
         $this->oDataQueryBuilder->addFilter($this->leftOperand, 'gt', $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
 
-    public function greaterThanOrEqual(string $rightOperand): ODataQueryBuilder {
+    public function greaterThanOrEqual($rightOperand): ODataQueryBuilder {
         $this->oDataQueryBuilder->addFilter($this->leftOperand, 'ge', $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
 
-    public function lessThan(string $rightOperand): ODataQueryBuilder {
+    public function lessThan($rightOperand): ODataQueryBuilder {
         $this->oDataQueryBuilder->addFilter($this->leftOperand, 'lt', $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
 
-    public function lessThanOrEqual(string $rightOperand): ODataQueryBuilder {
+    public function lessThanOrEqual($rightOperand): ODataQueryBuilder {
         $this->oDataQueryBuilder->addFilter($this->leftOperand, 'le', $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;

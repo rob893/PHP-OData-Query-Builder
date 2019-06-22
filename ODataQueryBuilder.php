@@ -5,6 +5,7 @@ namespace Libraries;
 use Libraries\ODataQueryBuilder\Helpers\ODataFilterBuilder;
 use Libraries\ODataQueryBuilder\Helpers\ODataComplexFilterBuilder;
 use Libraries\ODataQueryBuilder\Helpers\ODataOrderByBuilder;
+use Libraries\ODataQueryBuilder\Helpers\WhereBuilder;
 
 /**
  * This class is used to build odata querys. The query is built by chaining the fluent funcitons and then the final odata url string 
@@ -13,8 +14,9 @@ use Libraries\ODataQueryBuilder\Helpers\ODataOrderByBuilder;
 class ODataQueryBuilder {
 
     private $baseUrl = '';
-    private $entitySet = '';
-    private $entityKey = '';
+    //entitySet => entity key
+    private $entitySets = [];
+    private $entitySetIndex = 0;
     private $filters = [];
     private $complexFilterStrings = [];
     private $selectedProperties = '';
@@ -24,6 +26,8 @@ class ODataQueryBuilder {
     private $skip = 0;
     private $count = false;
     private $encodeUrl = true;
+    private $queryHasOption = false;
+    private $finalQueryString = '';
     
     /**
      * Constructor. Builds an instance of the ODataQueryBuilder to be used with a single OData query.  
@@ -40,7 +44,10 @@ class ODataQueryBuilder {
         }
 
         $this->baseUrl = $baseUrl;
-        $this->entitySet = $entitySet;
+
+        if ($entitySet !== '') {
+            $this->entitySets[$entitySet] = null;
+        }
     }
 
     /**
@@ -82,10 +89,25 @@ class ODataQueryBuilder {
      * @return ODataQueryBuilder
      */
     public function from(string $entitySet): ODataQueryBuilder {
-        $this->entitySet = $entitySet;
+        $this->entitySets = [];
+        $this->entitySetIndex = 0;
+        $this->entitySets[$entitySet] = null;
         
         return $this;
-    } 
+    }
+
+    public function thenFrom(string $entitySet): ODataQueryBuilder {
+        $entitySetKeys = array_keys($this->entitySets);
+
+        if (empty($this->entitySets) || $this->entitySets[$entitySetKeys[$this->entitySetIndex]] === null) {
+            throw new \Exception("Invalid use of thenFrom() funciton. thenFrom() must be preceded by a find() function.", 500);
+        }
+        
+        $this->entitySets[$entitySet] = null;
+        $this->entitySetIndex++;
+        
+        return $this;
+    }
 
     /**
      * Find a single entity by the entity's primary key. 
@@ -93,11 +115,17 @@ class ODataQueryBuilder {
      * 
      * @example builder->from('People')->find('bobjoe')->buildQuery(); This assumes the primary key is something like a username. This query will return the person with username of 'bobjoe'.
      *
-     * @param string $entityKey
+     * @param mixed $entityKey
      * @return ODataQueryBuilder
      */
-    public function find(string $entityKey): ODataQueryBuilder {
-        $this->entityKey = '(\'' . $entityKey . '\')';
+    public function find($entityKey): ODataQueryBuilder {
+        $entitySetKeys = array_keys($this->entitySets);
+
+        if (is_string($entityKey)) {
+            $entityKey = '\'' . $entityKey . '\'';
+        }
+        
+        $this->entitySets[$entitySetKeys[$this->entitySetIndex]] = '(' . $entityKey . ')';
 
         return $this;
     }
@@ -149,8 +177,8 @@ class ODataQueryBuilder {
         return new ODataFilterBuilder($this, $leftOperand, 'and');
     }
 
-    public function filterComplex(): ODataComplexFilterBuilder {
-        return new ODataComplexFilterBuilder($this);
+    public function filterComplex(): WhereBuilder {
+        return new WhereBuilder(new ODataComplexFilterBuilder($this));
     }
 
     /**
@@ -161,11 +189,11 @@ class ODataQueryBuilder {
      *
      * @param string $leftOperand
      * @param string $operator
-     * @param string $rightOperand
+     * @param mixed $rightOperand
      * @param string $andOr Used to determine logical operator to precede this filter.
      * @return ODataQueryBuilder
      */
-    public function addFilter(string $leftOperand, string $operator, string $rightOperand, string $andOr): ODataQueryBuilder {
+    public function addFilter(string $leftOperand, string $operator, $rightOperand, string $andOr): ODataQueryBuilder {
         if (!$this->isValidOdataOperator($operator)) {
             throw new \Exception('Invalid OData operator.', 400);
         }
@@ -174,7 +202,13 @@ class ODataQueryBuilder {
             throw new \Exception('Invalid andOr parameter. It should be either and or or.', 400);
         }
 
-        $filter = $leftOperand . ' ' . $operator . ' \'' . $rightOperand . '\'';
+        if (is_string($rightOperand)) {
+            $filter = $leftOperand . ' ' . $operator . ' \'' . $rightOperand . '\'';
+        }
+        else {
+            $filter = $leftOperand . ' ' . $operator . ' ' . $rightOperand;
+        }
+        
         
         $this->filters[$filter] = $andOr;
 
@@ -350,85 +384,133 @@ class ODataQueryBuilder {
      * @return string
      */
     public function buildQuery(): string {
-        $query = '';
-        $hasOption = false;
+        $this->appendServiceUrlToQuery();
+        $this->appendEntitySetsToQuery();
+        $this->appendFiltersToQuery();
+        $this->appendSelectsToQuery();
+        $this->appendExpandsToQuery();
+        $this->appendOrderByToQuery();
+        $this->appendTopToQuery();
+        $this->appendSkipToQuery();
+        $this->appendCountToQuery();
 
-        foreach ($this->complexFilterStrings as $complexFilter) {
-            if (!$hasOption) {
-                $hasOption = true;
-                $query .= '$filter=';
+        //remove the ? if the query has no query options.
+        if (!$this->queryHasOption) {
+            $this->finalQueryString = substr($this->finalQueryString, 0, -1);
+        }
+
+        return $this->finalQueryString;
+    }
+
+    private function appendServiceUrlToQuery() {
+        $this->finalQueryString .= $this->baseUrl;
+    }
+
+    private function appendEntitySetsToQuery() {
+        if (empty($this->entitySets)) {
+            throw new \Exception('The query is missing an entity set!', 500);
+        }
+
+        foreach ($this->entitySets as $entitySet => $entityKey) {
+            if (substr($this->finalQueryString, -1) !== '/') {
+                $this->finalQueryString .= '/';
             }
 
-            $query .= $this->encodeUrl ? urlencode($complexFilter) : $complexFilter;
+            $this->finalQueryString .= $entityKey !== null ? $entitySet . $entityKey : $entitySet;
+        }
+
+        $this->finalQueryString .= '?';
+    }
+
+    private function appendFiltersToQuery() {
+        //append complex filters
+        foreach ($this->complexFilterStrings as $complexFilter) {
+            if (!$this->queryHasOption) {
+                $this->queryHasOption = true;
+                $this->finalQueryString .= '$filter=';
+            }
+
+            $this->finalQueryString .= $this->encodeUrl ? urlencode($complexFilter) : $complexFilter;
         }
         
+        //append simple filters
         foreach ($this->filters as $filter => $andOr) {
-            if (!$hasOption) {
-                $hasOption = true;
-                $query .= '$filter=';
-                $query .= $this->encodeUrl ? urlencode($filter) : $filter;
+            if (!$this->queryHasOption) {
+                $this->queryHasOption = true;
+                $this->finalQueryString .= '$filter=';
+                $this->finalQueryString .= $this->encodeUrl ? urlencode($filter) : $filter;
             }
             else {
-                $query .= $this->encodeUrl ? urlencode(' ' . $andOr . ' ' .$filter) : ' ' . $andOr . ' ' .$filter;
+                $this->finalQueryString .= $this->encodeUrl ? urlencode(' ' . $andOr . ' ' .$filter) : ' ' . $andOr . ' ' .$filter;
             }
         }
+    }
 
+    private function appendSelectsToQuery() {
         if ($this->selectedProperties !== '') {
-            if ($hasOption) {
-                $query .= '&';
+            if ($this->queryHasOption) {
+                $this->finalQueryString .= '&';
             }
 
-            $hasOption = true;
-            $query .= $this->encodeUrl ? '$select=' . urlencode($this->selectedProperties) : '$select=' . $this->selectedProperties;
+            $this->queryHasOption = true;
+            $this->finalQueryString .= $this->encodeUrl ? '$select=' . urlencode($this->selectedProperties) : '$select=' . $this->selectedProperties;
         }
+    }
 
+    private function appendExpandsToQuery() {
         if ($this->expands !== '') {
-            if ($hasOption) {
-                $query .= '&';
+            if ($this->queryHasOption) {
+                $this->finalQueryString .= '&';
             }
 
-            $hasOption = true;
-            $query .= '$expand=';
-            $query .= $this->encodeUrl ?  urlencode($this->expands) : $this->expands;
+            $this->queryHasOption = true;
+            $this->finalQueryString .= '$expand=';
+            $this->finalQueryString .= $this->encodeUrl ?  urlencode($this->expands) : $this->expands;
         }
+    }
 
+    private function appendOrderByToQuery() {
         if ($this->orderBy !== '') {
-            if ($hasOption) {
-                $query .= '&';
+            if ($this->queryHasOptionn) {
+                $this->finalQueryString .= '&';
             }
 
-            $hasOption = true;
-            $query .= $this->encodeUrl ? '$orderby=' . urlencode($this->orderBy) : '$orderby=' . $this->orderBy;
+            $this->queryHasOption = true;
+            $this->finalQueryString .= $this->encodeUrl ? '$orderby=' . urlencode($this->orderBy) : '$orderby=' . $this->orderBy;
         }
+    }
 
-        if ($this->top > 0) {
-            if ($hasOption) {
-                $query .= '&';
-            }
-
-            $hasOption = true;
-            $query .= $this->encodeUrl ? '$top=' . urlencode($this->top) : '$top=' . $this->top;
-        }
-
-        if ($this->skip > 0) {
-            if ($hasOption) {
-                $query .= '&';
-            }
-
-            $hasOption = true;
-            $query .= $this->encodeUrl ? '$skip=' . urlencode($this->skip) : '$skip=' . $this->skip;
-        }
-
+    private function appendCountToQuery() {
         if ($this->count) {
-            if ($hasOption) {
-                $query .= '&';
+            if ($this->queryHasOption) {
+                $this->finalQueryString .= '&';
             }
 
-            $hasOption = true;
-            $query .= $this->encodeUrl ? '$count=' . urlencode('true') : '$count=' . 'true';
+            $this->queryHasOption = true;
+            $this->finalQueryString .= $this->encodeUrl ? '$count=' . urlencode('true') : '$count=' . 'true';
         }
+    }
 
-        return $this->baseUrl . $this->entitySet . $this->entityKey . '?' . $query;
+    private function appendSkipToQuery() {
+        if ($this->skip > 0) {
+            if ($this->queryHasOption) {
+                $this->finalQueryString .= '&';
+            }
+
+            $this->queryHasOption = true;
+            $this->finalQueryString .= $this->encodeUrl ? '$skip=' . urlencode($this->skip) : '$skip=' . $this->skip;
+        }
+    }
+
+    private function appendTopToQuery() {
+        if ($this->top > 0) {
+            if ($this->queryHasOption) {
+                $this->finalQueryString .= '&';
+            }
+
+            $this->queryHasOption = true;
+            $this->finalQueryString .= $this->encodeUrl ? '$top=' . urlencode($this->top) : '$top=' . $this->top;
+        }
     }
 
     /**

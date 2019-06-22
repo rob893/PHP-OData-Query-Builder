@@ -21,26 +21,16 @@ class ODataComplexFilterBuilder {
         return $this;
     }
 
-    public function where(string $leftOperand): ComplexFilterBuilderHelper {
-        return new ComplexFilterBuilderHelper($this, $leftOperand);
-    }
-
-    public function and(): ODataComplexFilterBuilder {
+    public function and(): WhereBuilder {
         $this->complexFilterString .= ' and ';
-        
-        return $this;
+
+        return new WhereBuilder($this);
     }
 
-    public function or(): ODataComplexFilterBuilder {
+    public function or(): WhereBuilder {
         $this->complexFilterString .= ' or ';
         
-        return $this;
-    }
-
-    public function openParentheses(): ODataComplexFilterBuilder {
-        $this->complexFilterString .= '(';
-        
-        return $this;
+        return new WhereBuilder($this);
     }
 
     public function closeParentheses(): ODataComplexFilterBuilder {
@@ -50,15 +40,42 @@ class ODataComplexFilterBuilder {
     }
 
     public function addToQuery(): ODataQueryBuilder {
+        $this->validateFilter();
+        
         $this->oDataQueryBuilder->addComplexFilterString($this->complexFilterString);
 
         return $this->oDataQueryBuilder;
+    }
+
+    private function validateFilter() {
+
+    }
+}
+
+class WhereBuilder {
+    
+    private $filterBuilder;
+
+
+    public function __construct(ODataComplexFilterBuilder $filterBuilder) {
+        $this->filterBuilder = $filterBuilder;
+    }
+
+    public function where(string $leftOperand): ComplexFilterBuilderHelper {
+        return new ComplexFilterBuilderHelper($this->filterBuilder, $leftOperand);
+    }
+
+    public function openParentheses(): WhereBuilder {
+        $this->filterBuilder->append('(');
+        
+        return $this;
     }
 }
 
 class ComplexFilterBuilderHelper {
     
     private $complexFilterBuilder;
+    private $not = false;
     private $leftOperand;
     
 
@@ -67,39 +84,109 @@ class ComplexFilterBuilderHelper {
         $this->leftOperand = $leftOperand;
     }
 
-    public function equals(string $rightOperand): ODataComplexFilterBuilder {
+    public function equals($rightOperand): ODataComplexFilterBuilder {
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+        
         $this->complexFilterBuilder->append($this->leftOperand . ' eq ' . $rightOperand);
+
+        if ($this->not) {
+            $this->complexFilterBuilder->append(')');
+        }
         
         return $this->complexFilterBuilder;
     }
 
-    public function notEquals(string $rightOperand): ODataComplexFilterBuilder {
+    public function notEquals($rightOperand): ODataComplexFilterBuilder {
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+        
         $this->complexFilterBuilder->append($this->leftOperand . ' ne ' . $rightOperand);
+
+        if ($this->not) {
+            $this->complexFilterBuilder->append(')');
+        }
         
         return $this->complexFilterBuilder;
     }
 
-    public function greaterThan(string $rightOperand): ODataComplexFilterBuilder {
+    public function greaterThan($rightOperand): ODataComplexFilterBuilder {
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+        
         $this->complexFilterBuilder->append($this->leftOperand . ' gt ' . $rightOperand);
+
+        if ($this->not) {
+            $this->complexFilterBuilder->append(')');
+        }
         
         return $this->complexFilterBuilder;
     }
 
-    public function greaterThanOrEqual(string $rightOperand): ODataComplexFilterBuilder {
+    public function greaterThanOrEqual($rightOperand): ODataComplexFilterBuilder {
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+        
         $this->complexFilterBuilder->append($this->leftOperand . ' ge ' . $rightOperand);
+
+        if ($this->not) {
+            $this->complexFilterBuilder->append(')');
+        }
         
         return $this->complexFilterBuilder;
     }
 
-    public function lessThan(string $rightOperand): ODataComplexFilterBuilder {
+    public function lessThan($rightOperand): ODataComplexFilterBuilder {
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+        
         $this->complexFilterBuilder->append($this->leftOperand . ' lt ' . $rightOperand);
+
+        if ($this->not) {
+            $this->complexFilterBuilder->append(')');
+        }
         
         return $this->complexFilterBuilder;
     }
 
-    public function lessThanOrEqual(string $rightOperand): ODataComplexFilterBuilder {
+    public function lessThanOrEqual($rightOperand): ODataComplexFilterBuilder {
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+        
         $this->complexFilterBuilder->append($this->leftOperand . ' le ' . $rightOperand);
+
+        if ($this->not) {
+            $this->complexFilterBuilder->append(')');
+        }
         
         return $this->complexFilterBuilder;
+    }
+
+    public function contains($rightOperand): ODataComplexFilterBuilder {
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+        
+        $this->complexFilterBuilder->append('contains(' . $this->leftOperand . ',' . $rightOperand . ')');
+
+        if ($this->not) {
+            $this->complexFilterBuilder->append(')');
+        }
+
+        return $this->complexFilterBuilder;
+    }
+
+    public function not(): ComplexFilterBuilderHelper {
+        $this->complexFilterBuilder->append('not (');
+        $this->not = true;
+        
+        return $this;
     }
 }
+
