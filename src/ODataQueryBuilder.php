@@ -459,13 +459,21 @@ class ODataQueryBuilder {
         $this->finalQueryString .= '$filter=';
 
         //append complex filters
+        $hasFilter = false;
         foreach ($this->filterStrings as $complexFilter) {
+            $hasFilter = true;
             $this->finalQueryString .= $this->encodeUrl ? urlencode($complexFilter) : $complexFilter;
         }
         
         //append simple filters
         foreach ($this->filters as $filter => $andOr) {
-            $this->finalQueryString .= $this->encodeUrl ? urlencode(' ' . $andOr . ' ' .$filter) : ' ' . $andOr . ' ' .$filter;
+            if ($hasFilter) {
+                $this->finalQueryString .= $this->encodeUrl ? urlencode(' ' . $andOr . ' ' .$filter) : ' ' . $andOr . ' ' .$filter;
+            }
+            else {
+                $hasFilter = true;
+                $this->finalQueryString .= $this->encodeUrl ? urlencode($filter) : $filter;
+            }
         }
     }
 
