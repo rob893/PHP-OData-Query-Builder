@@ -15,7 +15,7 @@ use Libraries\ODataQueryBuilder\Helpers\SimpleOrderByBuilder;
  */
 class ODataQueryBuilder {
 
-    private $baseUrl = '';
+    private $serviceUrl = '';
     //entitySet => entity key
     private $entitySets = [];
     private $entitySetIndex = 0;
@@ -36,17 +36,17 @@ class ODataQueryBuilder {
      * Constructor. Builds an instance of the ODataQueryBuilder to be used with a single OData query.  
      * Be sure to create a new instance for every unique OData call.
      *
-     * @param string $baseUrl    (Optional) This is the base url for the OData service. You can also pass in the the EntitySet at the end and it will automatcally separate them.
+     * @param string $serviceUrl    (Optional) This is the base url for the OData service. You can also pass in the the EntitySet at the end and it will automatcally separate them.
      * @param string $entitySet  (Optional) This is the entity set being queried for this OData call. This can also be set using the from() method.
      */
-    public function __construct(string $baseUrl = '', string $entitySet = '') {
+    public function __construct(string $serviceUrl = '', string $entitySet = '') {
         //If the last character is not /, that means the entity set was passed in as part of the base url.
-        if (substr($baseUrl, -1) !== '/') {
-            $entitySet = substr($baseUrl, strrpos($baseUrl, '/') + 1);
-            $baseUrl = substr($baseUrl, 0, (strlen($baseUrl) - strlen($entitySet)));
+        if (substr($serviceUrl, -1) !== '/') {
+            $entitySet = substr($serviceUrl, strrpos($serviceUrl, '/') + 1);
+            $serviceUrl = substr($serviceUrl, 0, (strlen($serviceUrl) - strlen($entitySet)));
         }
 
-        $this->baseUrl = $baseUrl;
+        $this->serviceUrl = $serviceUrl;
 
         if ($entitySet !== '') {
             $this->entitySets[$entitySet] = null;
@@ -54,15 +54,15 @@ class ODataQueryBuilder {
     }
 
     /**
-     * Sets the base url for the odata call. Do not pass in the entity set into this funciton. Use the from() method or pass it in the constructor.
+     * Sets the base service url for the odata call. Do not pass in the entity set into this funciton. Use the from() method or pass it in the constructor.
      * 
-     * @example $builder->setBaseUrl('http://services.odata.org/V4/TripPinService/'); 
+     * @example $builder->setsServiceUrl('http://services.odata.org/V4/TripPinService/'); 
      *
-     * @param string $baseUrl
+     * @param string $serviceUrl
      * @return ODataQueryBuilder
      */
-    public function setBaseUrl(string $baseUrl): ODataQueryBuilder {
-        $this->baseUrl = $baseUrl;
+    public function setServiceUrl(string $serviceUrl): ODataQueryBuilder {
+        $this->serviceUrl = $serviceUrl;
 
         return $this;
     }
@@ -370,7 +370,7 @@ class ODataQueryBuilder {
      * @return string
      */
     public function buildServiceRootQuery(): string {
-        return $this->baseUrl;
+        return $this->serviceUrl;
     }
 
     /**
@@ -382,10 +382,10 @@ class ODataQueryBuilder {
      */
     public function buildMetadataQuery(string $entitySet = ''): string {
         if ($entitySet === '') {
-            return $this->baseUrl . '$metadata';
+            return $this->serviceUrl . '$metadata';
         }
 
-        return $this->baseUrl . '$metadata#' . $entitySet;
+        return $this->serviceUrl . '$metadata#' . $entitySet;
     }
 
     /**
@@ -416,7 +416,7 @@ class ODataQueryBuilder {
     }
 
     private function appendServiceUrlToQuery() {
-        $this->finalQueryString .= $this->baseUrl;
+        $this->finalQueryString .= $this->serviceUrl;
     }
 
     private function appendEntitySetsToQuery() {
@@ -436,26 +436,25 @@ class ODataQueryBuilder {
     }
 
     private function appendFiltersToQuery() {
+        if (empty($this->filters) && empty($this->complexFilterStrings)) {
+            return;
+        }
+
+        if ($this->queryHasOption) {
+            $this->finalQueryString .= '&';
+        }
+
+        $this->queryHasOption = true;
+        $this->finalQueryString .= '$filter=';
+
         //append complex filters
         foreach ($this->complexFilterStrings as $complexFilter) {
-            if (!$this->queryHasOption) {
-                $this->queryHasOption = true;
-                $this->finalQueryString .= '$filter=';
-            }
-
             $this->finalQueryString .= $this->encodeUrl ? urlencode($complexFilter) : $complexFilter;
         }
         
         //append simple filters
         foreach ($this->filters as $filter => $andOr) {
-            if (!$this->queryHasOption) {
-                $this->queryHasOption = true;
-                $this->finalQueryString .= '$filter=';
-                $this->finalQueryString .= $this->encodeUrl ? urlencode($filter) : $filter;
-            }
-            else {
-                $this->finalQueryString .= $this->encodeUrl ? urlencode(' ' . $andOr . ' ' .$filter) : ' ' . $andOr . ' ' .$filter;
-            }
+            $this->finalQueryString .= $this->encodeUrl ? urlencode(' ' . $andOr . ' ' .$filter) : ' ' . $andOr . ' ' .$filter;
         }
     }
 
