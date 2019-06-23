@@ -4,8 +4,10 @@ namespace Libraries;
 
 use Libraries\ODataQueryBuilder\Helpers\ODataFilterBuilder;
 use Libraries\ODataQueryBuilder\Helpers\ODataComplexFilterBuilder;
-use Libraries\ODataQueryBuilder\Helpers\ODataOrderByBuilder;
 use Libraries\ODataQueryBuilder\Helpers\WhereBuilder;
+use Libraries\ODataQueryBuilder\Helpers\OrderByHelper;
+use Libraries\ODataQueryBuilder\Helpers\OrderByBuilder;
+use Libraries\ODataQueryBuilder\Helpers\SimpleOrderByBuilder;
 
 /**
  * This class is used to build odata querys. The query is built by chaining the fluent funcitons and then the final odata url string 
@@ -22,6 +24,7 @@ class ODataQueryBuilder {
     private $selectedProperties = '';
     private $expands = '';
     private $orderBy = '';
+    private $search = '';
     private $top = 0;
     private $skip = 0;
     private $count = false;
@@ -221,6 +224,12 @@ class ODataQueryBuilder {
         return $this;
     }
 
+    public function searchFor(string $searchTerm): ODataQueryBuilder {
+        $this->search = $searchTerm;
+        
+        return $this;
+    }
+
     /**
      * Include the passed in navigation properties in the results. 
      * Can pass in a comma separated string to expand on multiple navigation properties.
@@ -285,26 +294,29 @@ class ODataQueryBuilder {
      * @param string $property
      * @return ODataOrderByBuilder
      */
-    public function orderBy(string $property): ODataOrderByBuilder {
-        return new ODataOrderByBuilder($this, $property); //new ODataOrderByBuilder($this, $property);
+    public function orderBy(string $property): SimpleOrderByBuilder {
+        return new SimpleOrderByBuilder($this, $property); //new ODataOrderByBuilder($this, $property);
+    }
+
+    public function orderByComplex(string $property): OrderByHelper {
+        return new OrderByHelper(new OrderByBuilder($this), $property);
     }
 
     /**
      * Manually add an orderBy clause. Used by the order by builder helper class to provide fluency. 
      * Can also be used by anyone who does not like the fluent nature of this library.
      * 
-     * @example $builder->from('People')->addOrderBy('FirstName', 'desc')->buildQuery();
+     * @example $builder->from('People')->setOrderByString('FirstName desc, LastName asc')->buildQuery();
      *
-     * @param string $property
-     * @param string $ascDesc
+     * @param string $orderByString
      * @return ODataQueryBuilder
      */
-    public function addOrderBy(string $property, string $ascDesc): ODataQueryBuilder {
-        if ($ascDesc !== 'asc' && $ascDesc !== 'desc') {
-            throw new \Exception('Invalid ascDesc parameter. It should be either asc or desc.', 400);
+    public function setOrderByString(string $orderByString): ODataQueryBuilder {
+        if (strlen($this->orderBy) > 0) {
+            throw new \Exception('You can only have one order by clause!', 500);
         }
-        
-        $this->orderBy = $property . ' ' . $ascDesc;
+
+        $this->orderBy = $orderByString;
         
         return $this;
     }
@@ -387,6 +399,7 @@ class ODataQueryBuilder {
         $this->appendServiceUrlToQuery();
         $this->appendEntitySetsToQuery();
         $this->appendFiltersToQuery();
+        $this->appendSearchToQuery();
         $this->appendSelectsToQuery();
         $this->appendExpandsToQuery();
         $this->appendOrderByToQuery();
@@ -471,12 +484,24 @@ class ODataQueryBuilder {
 
     private function appendOrderByToQuery() {
         if ($this->orderBy !== '') {
-            if ($this->queryHasOptionn) {
+            if ($this->queryHasOption) {
                 $this->finalQueryString .= '&';
             }
 
             $this->queryHasOption = true;
             $this->finalQueryString .= $this->encodeUrl ? '$orderby=' . urlencode($this->orderBy) : '$orderby=' . $this->orderBy;
+        }
+    }
+
+    private function appendSearchToQuery() {
+        if ($this->search !== '') {
+            if ($this->queryHasOption) {
+                $this->finalQueryString .= '&';
+            }
+
+            $this->queryHasOption = true;
+            $this->finalQueryString .= '$search=';
+            $this->finalQueryString .= $this->encodeUrl ? urlencode($this->search) : $this->search;
         }
     }
 
