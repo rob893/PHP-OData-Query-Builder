@@ -1,13 +1,12 @@
 <?php
 
-namespace Libraries;
+namespace ODataQueryBuilder;
 
-use Libraries\ODataQueryBuilder\Helpers\ODataFilterBuilder;
-use Libraries\ODataQueryBuilder\Helpers\ODataComplexFilterBuilder;
-use Libraries\ODataQueryBuilder\Helpers\WhereBuilder;
-use Libraries\ODataQueryBuilder\Helpers\OrderByHelper;
-use Libraries\ODataQueryBuilder\Helpers\OrderByBuilder;
-use Libraries\ODataQueryBuilder\Helpers\SimpleOrderByBuilder;
+use ODataQueryBuilder\Helpers\SimpleOrderByBuilder;
+use ODataQueryBuilder\Helpers\OrderByHelperStart;
+use ODataQueryBuilder\Helpers\SimpleFilterBuilder;
+use ODataQueryBuilder\Helpers\FilterBuilderStart;
+use ODataQueryBuilder\Helpers\FilterBuilder;
 
 /**
  * This class is used to build odata querys. The query is built by chaining the fluent funcitons and then the final odata url string 
@@ -20,7 +19,7 @@ class ODataQueryBuilder {
     private $entitySets = [];
     private $entitySetIndex = 0;
     private $filters = [];
-    private $complexFilterStrings = [];
+    private $filterStrings = [];
     private $selectedProperties = '';
     private $expands = '';
     private $orderBy = '';
@@ -144,10 +143,10 @@ class ODataQueryBuilder {
      * @example $builder->from('People')->filter('LastName')->buildQuery(); WRONG!!! There must be an operator funciton called after filter()
      *
      * @param string $leftOperand
-     * @return ODataFilterBuilder
+     * @return SimpleFilterBuilder
      */
-    public function filter(string $leftOperand): ODataFilterBuilder {
-        return new ODataFilterBuilder($this, $leftOperand, 'and');
+    public function filter(string $leftOperand): SimpleFilterBuilder {
+        return new SimpleFilterBuilder($this, $leftOperand, 'and');
     }
 
     /**
@@ -159,10 +158,10 @@ class ODataQueryBuilder {
      * @example $builder->from('People')->filter('LastName')->equals('Smith')->orFilter('LastName')->buildQuery(); WRONG!!! There must be an operator funciton called after filter().
      *
      * @param string $leftOperand
-     * @return ODataFilterBuilder
+     * @return SimpleFilterBuilder
      */
-    public function orFilter(string $leftOperand): ODataFilterBuilder {
-        return new ODataFilterBuilder($this, $leftOperand, 'or');
+    public function orFilter(string $leftOperand): SimpleFilterBuilder {
+        return new SimpleFilterBuilder($this, $leftOperand, 'or');
     }
 
     /**
@@ -174,14 +173,14 @@ class ODataQueryBuilder {
      * @example $builder->from('People')->filter('LastName')->equals('Smith')->andFilter('FirstName')->buildQuery(); WRONG!!! There must be an operator funciton called after filter().
      *
      * @param string $leftOperand
-     * @return ODataFilterBuilder
+     * @return SimpleFilterBuilder
      */
-    public function andFilter(string $leftOperand): ODataFilterBuilder {
-        return new ODataFilterBuilder($this, $leftOperand, 'and');
+    public function andFilter(string $leftOperand): SimpleFilterBuilder {
+        return new SimpleFilterBuilder($this, $leftOperand, 'and');
     }
 
-    public function filterComplex(): WhereBuilder {
-        return new WhereBuilder(new ODataComplexFilterBuilder($this));
+    public function filterBuilder(): FilterBuilderStart {
+        return new FilterBuilderStart(new FilterBuilder($this));
     }
 
     /**
@@ -218,8 +217,8 @@ class ODataQueryBuilder {
         return $this;
     }
 
-    public function addComplexFilterString(string $complexFilterString): ODataQueryBuilder {
-        $this->complexFilterStrings[] = $complexFilterString;
+    public function addFilterString(string $filterString): ODataQueryBuilder {
+        $this->filterStrings[] = $filterString;
 
         return $this;
     }
@@ -295,11 +294,11 @@ class ODataQueryBuilder {
      * @return ODataOrderByBuilder
      */
     public function orderBy(string $property): SimpleOrderByBuilder {
-        return new SimpleOrderByBuilder($this, $property); //new ODataOrderByBuilder($this, $property);
+        return new SimpleOrderByBuilder($this, $property);
     }
 
-    public function orderByComplex(string $property): OrderByHelper {
-        return new OrderByHelper(new OrderByBuilder($this), $property);
+    public function orderByBuilder(): OrderByHelperStart {
+        return new OrderByHelperStart($this);
     }
 
     /**
@@ -330,6 +329,10 @@ class ODataQueryBuilder {
      * @return ODataQueryBuilder
      */
     public function top(int $top): ODataQueryBuilder {
+        if ($top < 1) {
+            throw new \Exception('$top must be greater than 0.', 500);
+        }
+
         $this->top = $top;
 
         return $this;
@@ -345,6 +348,10 @@ class ODataQueryBuilder {
      * @return ODataQueryBuilder
      */
     public function skip(int $skip): ODataQueryBuilder {
+        if ($skip < 1) {
+            throw new \Exception('$skip must be greater than 0.', 500);
+        }
+
         $this->skip = $skip;
         
         return $this;
@@ -396,6 +403,10 @@ class ODataQueryBuilder {
      * @return string
      */
     public function buildQuery(): string {
+        if ($this->queryHasOption || strlen($this->finalQueryString) > 0) {
+            throw new \Exception('You can only use this instance of ODataQueryBuilder for a single query! Please create a new builder for a new query.', 500);
+        }
+
         $this->appendServiceUrlToQuery();
         $this->appendEntitySetsToQuery();
         $this->appendFiltersToQuery();
@@ -436,7 +447,7 @@ class ODataQueryBuilder {
     }
 
     private function appendFiltersToQuery() {
-        if (empty($this->filters) && empty($this->complexFilterStrings)) {
+        if (empty($this->filters) && empty($this->filterStrings)) {
             return;
         }
 
@@ -448,7 +459,7 @@ class ODataQueryBuilder {
         $this->finalQueryString .= '$filter=';
 
         //append complex filters
-        foreach ($this->complexFilterStrings as $complexFilter) {
+        foreach ($this->filterStrings as $complexFilter) {
             $this->finalQueryString .= $this->encodeUrl ? urlencode($complexFilter) : $complexFilter;
         }
         
@@ -459,82 +470,101 @@ class ODataQueryBuilder {
     }
 
     private function appendSelectsToQuery() {
-        if ($this->selectedProperties !== '') {
-            if ($this->queryHasOption) {
-                $this->finalQueryString .= '&';
-            }
-
-            $this->queryHasOption = true;
-            $this->finalQueryString .= $this->encodeUrl ? '$select=' . urlencode($this->selectedProperties) : '$select=' . $this->selectedProperties;
+        if ($this->selectedProperties === '') {
+            return;
         }
+
+        if ($this->queryHasOption) {
+            $this->finalQueryString .= '&';
+        }
+
+        $this->queryHasOption = true;
+        $this->finalQueryString .= '$select=';
+        $this->finalQueryString .= $this->encodeUrl ? urlencode($this->selectedProperties) : $this->selectedProperties;
     }
 
     private function appendExpandsToQuery() {
-        if ($this->expands !== '') {
-            if ($this->queryHasOption) {
-                $this->finalQueryString .= '&';
-            }
-
-            $this->queryHasOption = true;
-            $this->finalQueryString .= '$expand=';
-            $this->finalQueryString .= $this->encodeUrl ?  urlencode($this->expands) : $this->expands;
+        if ($this->expands === '') {
+            return;
         }
+
+        if ($this->queryHasOption) {
+            $this->finalQueryString .= '&';
+        }
+
+        $this->queryHasOption = true;
+        $this->finalQueryString .= '$expand=';
+        $this->finalQueryString .= $this->encodeUrl ?  urlencode($this->expands) : $this->expands;
     }
 
     private function appendOrderByToQuery() {
-        if ($this->orderBy !== '') {
-            if ($this->queryHasOption) {
-                $this->finalQueryString .= '&';
-            }
-
-            $this->queryHasOption = true;
-            $this->finalQueryString .= $this->encodeUrl ? '$orderby=' . urlencode($this->orderBy) : '$orderby=' . $this->orderBy;
+        if ($this->orderBy === '') {
+            return;
         }
+
+        if ($this->queryHasOption) {
+            $this->finalQueryString .= '&';
+        }
+
+        $this->queryHasOption = true;
+        $this->finalQueryString .= '$orderby=';
+        $this->finalQueryString .= $this->encodeUrl ? urlencode($this->orderBy) : $this->orderBy;
     }
 
     private function appendSearchToQuery() {
-        if ($this->search !== '') {
-            if ($this->queryHasOption) {
-                $this->finalQueryString .= '&';
-            }
-
-            $this->queryHasOption = true;
-            $this->finalQueryString .= '$search=';
-            $this->finalQueryString .= $this->encodeUrl ? urlencode($this->search) : $this->search;
+        if ($this->search === '') {
+            return;
         }
+
+        if ($this->queryHasOption) {
+            $this->finalQueryString .= '&';
+        }
+
+        $this->queryHasOption = true;
+        $this->finalQueryString .= '$search=';
+        $this->finalQueryString .= $this->encodeUrl ? urlencode($this->search) : $this->search;
     }
 
     private function appendCountToQuery() {
-        if ($this->count) {
-            if ($this->queryHasOption) {
-                $this->finalQueryString .= '&';
-            }
-
-            $this->queryHasOption = true;
-            $this->finalQueryString .= $this->encodeUrl ? '$count=' . urlencode('true') : '$count=' . 'true';
+        if (!$this->count) {
+            return;
         }
+
+        if ($this->queryHasOption) {
+            $this->finalQueryString .= '&';
+        }
+
+        $this->queryHasOption = true;
+        $this->finalQueryString .= '$count=';
+        $this->finalQueryString .= $this->encodeUrl ? urlencode('true') : 'true';
     }
 
     private function appendSkipToQuery() {
-        if ($this->skip > 0) {
-            if ($this->queryHasOption) {
-                $this->finalQueryString .= '&';
-            }
-
-            $this->queryHasOption = true;
-            $this->finalQueryString .= $this->encodeUrl ? '$skip=' . urlencode($this->skip) : '$skip=' . $this->skip;
+        if ($this->skip < 1) {
+            return;
         }
+
+        if ($this->queryHasOption) {
+            $this->finalQueryString .= '&';
+        }
+
+        $this->queryHasOption = true;
+        $this->finalQueryString .= '$skip=';
+        $this->finalQueryString .= $this->encodeUrl ? urlencode($this->skip) : $this->skip;
     }
 
     private function appendTopToQuery() {
-        if ($this->top > 0) {
-            if ($this->queryHasOption) {
-                $this->finalQueryString .= '&';
-            }
-
-            $this->queryHasOption = true;
-            $this->finalQueryString .= $this->encodeUrl ? '$top=' . urlencode($this->top) : '$top=' . $this->top;
+        if ($this->top < 1) {
+            return;
         }
+
+        if ($this->queryHasOption) {
+            $this->finalQueryString .= '&';
+        }
+
+        $this->queryHasOption = true;
+        $this->finalQueryString .= '$top=';
+        $this->finalQueryString .= $this->encodeUrl ? urlencode($this->top) : $this->top;
     }
 
     /**

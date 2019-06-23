@@ -1,8 +1,8 @@
 <?php
 
-namespace Libraries\ODataQueryBuilder\Helpers;
+namespace ODataQueryBuilder\Helpers;
 
-use Libraries\ODataQueryBuilder;
+use ODataQueryBuilder\ODataQueryBuilder;
 
 
 class SearchBuilder {

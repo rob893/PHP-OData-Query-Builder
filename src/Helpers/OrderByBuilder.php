@@ -1,8 +1,8 @@
 <?php
 
-namespace Libraries\ODataQueryBuilder\Helpers;
+namespace ODataQueryBuilder\Helpers;
 
-use Libraries\ODataQueryBuilder;
+use ODataQueryBuilder\ODataQueryBuilder;
 
 
 class OrderByBuilder {
@@ -31,6 +31,20 @@ class OrderByBuilder {
         $this->oDataQueryBuilder->setOrderByString($this->orderByString);
         
         return $this->oDataQueryBuilder;
+    }
+}
+
+class OrderByHelperStart {
+
+    private $oDataQueryBuilder;
+
+
+    public function __construct(ODataQueryBuilder $queryBuilder) {
+        $this->oDataQueryBuilder = $queryBuilder;
+    }
+
+    public function orderBy(string $property): OrderByHelper {
+        return new OrderByHelper(new OrderByBuilder($this->oDataQueryBuilder), $property);
     }
 }
 
