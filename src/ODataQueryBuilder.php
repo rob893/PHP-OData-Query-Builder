@@ -145,7 +145,7 @@ class ODataQueryBuilder {
      * @param string $leftOperand
      * @return SimpleFilterBuilder
      */
-    public function filter(string $leftOperand): SimpleFilterBuilder {
+    public function filterWhere(string $leftOperand): SimpleFilterBuilder {
         return new SimpleFilterBuilder($this, $leftOperand, 'and');
     }
 
@@ -160,7 +160,7 @@ class ODataQueryBuilder {
      * @param string $leftOperand
      * @return SimpleFilterBuilder
      */
-    public function orFilter(string $leftOperand): SimpleFilterBuilder {
+    public function orFilterWhere(string $leftOperand): SimpleFilterBuilder {
         return new SimpleFilterBuilder($this, $leftOperand, 'or');
     }
 
@@ -175,7 +175,7 @@ class ODataQueryBuilder {
      * @param string $leftOperand
      * @return SimpleFilterBuilder
      */
-    public function andFilter(string $leftOperand): SimpleFilterBuilder {
+    public function andFilterWhere(string $leftOperand): SimpleFilterBuilder {
         return new SimpleFilterBuilder($this, $leftOperand, 'and');
     }
 

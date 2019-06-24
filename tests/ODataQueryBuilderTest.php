@@ -21,7 +21,7 @@ final class ODataQueryBuilderTest extends TestCase {
     public function testSimpleFilter() {
         $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
 
-        $query = $builder->from('People')->filter('FirstName')->equals('John')->andFilter('LastName')->equals('Smith')->encodeUrl(false)->buildQuery();
+        $query = $builder->from('People')->filterWhere('FirstName')->equals('John')->andFilterWhere('LastName')->equals('Smith')->encodeUrl(false)->buildQuery();
 
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'John\' and LastName eq \'Smith\'', $query);
     }
@@ -31,15 +31,15 @@ final class ODataQueryBuilderTest extends TestCase {
         
         $query = $builder->from('People')->find('bob')
             ->thenFrom('Trips')
-            ->filterBuilder()
-                ->openParentheses()
-                    ->where('Name')->contains('US')->or()->where('Name')->equals('TestName')
-                ->closeParentheses()
-                ->and()->where('Cost')->lessThan(3000)
-            ->addToQuery()
-            ->orderByBuilder()
-                ->orderBy('Name')->ascending()->thenBy('Cost')->descending()
-            ->addToQuery()
+                ->filterBuilder()
+                    ->openParentheses()
+                        ->where('Name')->contains('US')->or()->where('Name')->equals('TestName')
+                    ->closeParentheses()
+                    ->and()->where('Cost')->lessThan(3000)
+                ->addToQuery()
+                ->orderByBuilder()
+                    ->orderBy('Name')->ascending()->thenBy('Cost')->descending()
+                ->addToQuery()
             ->encodeUrl(false)
             ->buildQuery();
 
@@ -51,7 +51,7 @@ final class ODataQueryBuilderTest extends TestCase {
     public function testComplex2() {
         $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
         
-        $query = $builder->from('People')->filter('FirstName')->equals('Joe')
+        $query = $builder->from('People')->filterWhere('FirstName')->equals('Joe')
             ->filterBuilder()
                 ->where('LastName')->toLower()->toUpper()->toLower()->toUpper()->contains('JO')
             ->addToQuery()
