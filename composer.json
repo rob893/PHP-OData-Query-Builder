@@ -1,5 +1,5 @@
 {
-    "name": "PHP-OData-Query-Builder",
+    "name": "rherb/PHP-OData-Query-Builder",
     "version": "0.1.0",
     "description": "OData Query Builder for PHP",
     "keywords": ["odata", "rest", "php"],
