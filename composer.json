@@ -5,6 +5,7 @@
     "keywords": ["odata", "rest", "php"],
     "homepage": "https://github.com/rob893/PHP-OData-Query-Builder",
     "type": "library",
+    "license": "MIT",
     "authors": [
         {
             "name": "Robert Herber",
