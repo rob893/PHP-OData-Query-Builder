@@ -47,4 +47,19 @@ final class ODataQueryBuilderTest extends TestCase {
             $query
         );
     }
+
+    public function testComplex2() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+        
+        $query = $builder->from('People')->filter('FirstName')->equals('Joe')
+            ->filterBuilder()
+                ->where('LastName')->toLower()->toUpper()->toLower()->toUpper()->contains('JO')
+            ->addToQuery()
+            ->encodeUrl(false)
+            ->buildQuery();
+        
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=contains(toupper(tolower(toupper(tolower(LastName)))),\'JO\') and FirstName eq \'Joe\'',
+            $query
+        );
+    }
 }

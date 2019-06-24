@@ -168,10 +168,8 @@ class FilterBuilderHelper {
         return $this->complexFilterBuilder;
     }
 
-    public function contains($rightOperand): FilterBuilder {
-        if (is_string($rightOperand)) {
-            $rightOperand = '\'' . $rightOperand . '\'';
-        }
+    public function contains(string $rightOperand): FilterBuilder {
+        $rightOperand = '\'' . $rightOperand . '\'';
         
         $this->complexFilterBuilder->append('contains(' . $this->leftOperand . ',' . $rightOperand . ')');
 
@@ -180,6 +178,76 @@ class FilterBuilderHelper {
         }
 
         return $this->complexFilterBuilder;
+    }
+
+    public function endsWith(string $rightOperand): FilterBuilder {
+        $rightOperand = '\'' . $rightOperand . '\'';
+        
+        $this->complexFilterBuilder->append('endswith(' . $this->leftOperand . ',' . $rightOperand . ')');
+
+        if ($this->not) {
+            $this->complexFilterBuilder->append(')');
+        }
+
+        return $this->complexFilterBuilder;
+    }
+
+    public function startsWith(string $rightOperand): FilterBuilder {
+        $rightOperand = '\'' . $rightOperand . '\'';
+        
+        $this->complexFilterBuilder->append('startswith(' . $this->leftOperand . ',' . $rightOperand . ')');
+
+        if ($this->not) {
+            $this->complexFilterBuilder->append(')');
+        }
+
+        return $this->complexFilterBuilder;
+    }
+
+    public function substring(int $rightOperand): FilterBuilderHelper {
+        $this->leftOperand = 'substring(' . $this->leftOperand . ',' . $rightOperand . ')';
+
+        return $this;
+    }
+
+    public function toLower(): FilterBuilderHelper {
+        $this->leftOperand = 'tolower(' . $this->leftOperand . ')';
+
+        return $this;
+    }
+
+    public function toUpper(): FilterBuilderHelper {
+        $this->leftOperand = 'toupper(' . $this->leftOperand . ')';
+
+        return $this;
+    }
+
+    public function trim(): FilterBuilderHelper {
+        $this->leftOperand = 'trim(' . $this->leftOperand . ')';
+
+        return $this;
+    }
+
+    public function concat(string $rightOperand): FilterBuilderHelper {
+        $rightOperand = '\'' . $rightOperand . '\'';
+
+        $this->leftOperand = 'concat(' . $this->leftOperand . ',' . $rightOperand . ')';
+
+        return $this;
+    }
+
+    public function indexOf(string $rightOperand): FilterBuilderHelper {
+        $rightOperand = '\'' . $rightOperand . '\'';
+        
+        $this->leftOperand = 'indexof(' . $this->leftOperand . ',' . $rightOperand . ')';
+
+        return $this;
+    }
+
+    public function length(): FilterBuilderHelper {
+        $this->complexFilterBuilder->append('length(' . $this->leftOperand . ')');
+
+        return $this;
     }
 
     public function not(): FilterBuilderHelper {
