@@ -21,16 +21,16 @@ class FilterBuilder {
         return $this;
     }
 
-    public function and(): FilterBuilderStart {
+    public function and(): FilterBuilderIntermediate {
         $this->complexFilterString .= ' and ';
 
-        return new FilterBuilderStart($this);
+        return new FilterBuilderIntermediate($this);
     }
 
-    public function or(): FilterBuilderStart {
+    public function or(): FilterBuilderIntermediate {
         $this->complexFilterString .= ' or ';
         
-        return new FilterBuilderStart($this);
+        return new FilterBuilderIntermediate($this);
     }
 
     public function closeParentheses(): FilterBuilder {
@@ -52,9 +52,9 @@ class FilterBuilder {
     }
 }
 
-class FilterBuilderStart {
+class FilterBuilderIntermediate {
     
-    private $filterBuilder;
+    protected $filterBuilder;
 
 
     public function __construct(FilterBuilder $filterBuilder) {
@@ -65,10 +65,25 @@ class FilterBuilderStart {
         return new FilterBuilderHelper($this->filterBuilder, $leftOperand);
     }
 
-    public function openParentheses(): FilterBuilderStart {
+    public function openParentheses(): FilterBuilderIntermediate {
         $this->filterBuilder->append('(');
         
         return $this;
+    }
+}
+
+class FilterBuilderStart extends FilterBuilderIntermediate {
+
+    public function prependAnd(): FilterBuilderIntermediate {
+        $this->filterBuilder->append(' and ');
+
+        return new FilterBuilderIntermediate($this->filterBuilder);
+    }
+
+    public function prependOr(): FilterBuilderIntermediate {
+        $this->filterBuilder->append(' or ');
+
+        return new FilterBuilderIntermediate($this->filterBuilder);
     }
 }
 
