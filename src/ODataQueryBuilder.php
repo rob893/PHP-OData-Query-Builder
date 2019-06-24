@@ -67,7 +67,7 @@ class ODataQueryBuilder {
     }
 
     /**
-     * Url encoding of the odata call is set to true by defualt. 
+     * Url encoding of the odata call is set to true by default. 
      * Pass in false into this function for the buildQuery() function to return the query string without url encoding.
      * 
      * @example $builder->from('People')->filter('FirstName')->equals('Bob')->encodeUrl(false)->buildQuery(); Will return the query string without urn encoding.
@@ -115,7 +115,7 @@ class ODataQueryBuilder {
      * Find a single entity by the entity's primary key. 
      * Use the $metadata xml document to see which property is the primary key. The primary key is in the <Key> tags.
      * 
-     * @example builder->from('People')->find('bobjoe')->buildQuery(); This assumes the primary key is something like a username. This query will return the person with username of 'bobjoe'.
+     * @example $builder->from('People')->find('bobjoe')->buildQuery(); This assumes the primary key is something like a username. This query will return the person with username of 'bobjoe'.
      *
      * @param mixed $entityKey
      * @return ODataQueryBuilder
