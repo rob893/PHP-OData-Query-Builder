@@ -21,4 +21,4 @@ $builder->from('Books')->filter('Cost')->lessThan(20)->buildQuery();
 $builder->from('People')->filter('LastName')->equals('Smith')->buildQuery();
 $builder->from('People')->filter('LastName')->equals('Smith')->andFilter('FirstName')->equals('Joe')->buildQuery();
 ```
-etc.
+Please view the test cases for more complex examples.
