@@ -8,7 +8,7 @@ use ODataQueryBuilder\ODataQueryBuilder;
 class FilterBuilder {
 
     private $oDataQueryBuilder;
-    private $complexFilterString = '';
+    private $filterString = '';
 
 
     public function __construct(ODataQueryBuilder $queryBuilder) {
@@ -16,25 +16,25 @@ class FilterBuilder {
     }
 
     public function append(string $stringToAppend): FilterBuilder {
-        $this->complexFilterString .= $stringToAppend;
+        $this->filterString .= $stringToAppend;
 
         return $this;
     }
 
     public function and(): FilterBuilderIntermediate {
-        $this->complexFilterString .= ' and ';
+        $this->filterString .= ' and ';
 
         return new FilterBuilderIntermediate($this);
     }
 
     public function or(): FilterBuilderIntermediate {
-        $this->complexFilterString .= ' or ';
+        $this->filterString .= ' or ';
         
         return new FilterBuilderIntermediate($this);
     }
 
     public function closeParentheses(): FilterBuilder {
-        $this->complexFilterString .= ')';
+        $this->filterString .= ')';
         
         return $this;
     }
@@ -42,7 +42,7 @@ class FilterBuilder {
     public function addToQuery(): ODataQueryBuilder {
         $this->validateFilter();
         
-        $this->oDataQueryBuilder->addFilterString($this->complexFilterString);
+        $this->oDataQueryBuilder->addFilterString($this->filterString);
 
         return $this->oDataQueryBuilder;
     }
@@ -89,13 +89,13 @@ class FilterBuilderStart extends FilterBuilderIntermediate {
 
 class FilterBuilderHelper {
     
-    private $complexFilterBuilder;
+    private $filterBuilder;
     private $not = false;
     private $leftOperand;
     
 
-    public function __construct(FilterBuilder $complexFilterBuilder, string $leftOperand) {
-        $this->complexFilterBuilder = $complexFilterBuilder;
+    public function __construct(FilterBuilder $filterBuilder, string $leftOperand) {
+        $this->filterBuilder = $filterBuilder;
         $this->leftOperand = $leftOperand;
     }
 
@@ -104,13 +104,13 @@ class FilterBuilderHelper {
             $rightOperand = '\'' . $rightOperand . '\'';
         }
         
-        $this->complexFilterBuilder->append($this->leftOperand . ' eq ' . $rightOperand);
+        $this->filterBuilder->append($this->leftOperand . ' eq ' . $rightOperand);
 
         if ($this->not) {
-            $this->complexFilterBuilder->append(')');
+            $this->filterBuilder->append(')');
         }
         
-        return $this->complexFilterBuilder;
+        return $this->filterBuilder;
     }
 
     public function notEquals($rightOperand): FilterBuilder {
@@ -118,13 +118,13 @@ class FilterBuilderHelper {
             $rightOperand = '\'' . $rightOperand . '\'';
         }
         
-        $this->complexFilterBuilder->append($this->leftOperand . ' ne ' . $rightOperand);
+        $this->filterBuilder->append($this->leftOperand . ' ne ' . $rightOperand);
 
         if ($this->not) {
-            $this->complexFilterBuilder->append(')');
+            $this->filterBuilder->append(')');
         }
         
-        return $this->complexFilterBuilder;
+        return $this->filterBuilder;
     }
 
     public function greaterThan($rightOperand): FilterBuilder {
@@ -132,13 +132,13 @@ class FilterBuilderHelper {
             $rightOperand = '\'' . $rightOperand . '\'';
         }
         
-        $this->complexFilterBuilder->append($this->leftOperand . ' gt ' . $rightOperand);
+        $this->filterBuilder->append($this->leftOperand . ' gt ' . $rightOperand);
 
         if ($this->not) {
-            $this->complexFilterBuilder->append(')');
+            $this->filterBuilder->append(')');
         }
         
-        return $this->complexFilterBuilder;
+        return $this->filterBuilder;
     }
 
     public function greaterThanOrEqual($rightOperand): FilterBuilder {
@@ -146,13 +146,13 @@ class FilterBuilderHelper {
             $rightOperand = '\'' . $rightOperand . '\'';
         }
         
-        $this->complexFilterBuilder->append($this->leftOperand . ' ge ' . $rightOperand);
+        $this->filterBuilder->append($this->leftOperand . ' ge ' . $rightOperand);
 
         if ($this->not) {
-            $this->complexFilterBuilder->append(')');
+            $this->filterBuilder->append(')');
         }
         
-        return $this->complexFilterBuilder;
+        return $this->filterBuilder;
     }
 
     public function lessThan($rightOperand): FilterBuilder {
@@ -160,13 +160,13 @@ class FilterBuilderHelper {
             $rightOperand = '\'' . $rightOperand . '\'';
         }
         
-        $this->complexFilterBuilder->append($this->leftOperand . ' lt ' . $rightOperand);
+        $this->filterBuilder->append($this->leftOperand . ' lt ' . $rightOperand);
 
         if ($this->not) {
-            $this->complexFilterBuilder->append(')');
+            $this->filterBuilder->append(')');
         }
         
-        return $this->complexFilterBuilder;
+        return $this->filterBuilder;
     }
 
     public function lessThanOrEqual($rightOperand): FilterBuilder {
@@ -174,49 +174,49 @@ class FilterBuilderHelper {
             $rightOperand = '\'' . $rightOperand . '\'';
         }
         
-        $this->complexFilterBuilder->append($this->leftOperand . ' le ' . $rightOperand);
+        $this->filterBuilder->append($this->leftOperand . ' le ' . $rightOperand);
 
         if ($this->not) {
-            $this->complexFilterBuilder->append(')');
+            $this->filterBuilder->append(')');
         }
         
-        return $this->complexFilterBuilder;
+        return $this->filterBuilder;
     }
 
     public function contains(string $rightOperand): FilterBuilder {
         $rightOperand = '\'' . $rightOperand . '\'';
         
-        $this->complexFilterBuilder->append('contains(' . $this->leftOperand . ',' . $rightOperand . ')');
+        $this->filterBuilder->append('contains(' . $this->leftOperand . ',' . $rightOperand . ')');
 
         if ($this->not) {
-            $this->complexFilterBuilder->append(')');
+            $this->filterBuilder->append(')');
         }
 
-        return $this->complexFilterBuilder;
+        return $this->filterBuilder;
     }
 
     public function endsWith(string $rightOperand): FilterBuilder {
         $rightOperand = '\'' . $rightOperand . '\'';
         
-        $this->complexFilterBuilder->append('endswith(' . $this->leftOperand . ',' . $rightOperand . ')');
+        $this->filterBuilder->append('endswith(' . $this->leftOperand . ',' . $rightOperand . ')');
 
         if ($this->not) {
-            $this->complexFilterBuilder->append(')');
+            $this->filterBuilder->append(')');
         }
 
-        return $this->complexFilterBuilder;
+        return $this->filterBuilder;
     }
 
     public function startsWith(string $rightOperand): FilterBuilder {
         $rightOperand = '\'' . $rightOperand . '\'';
         
-        $this->complexFilterBuilder->append('startswith(' . $this->leftOperand . ',' . $rightOperand . ')');
+        $this->filterBuilder->append('startswith(' . $this->leftOperand . ',' . $rightOperand . ')');
 
         if ($this->not) {
-            $this->complexFilterBuilder->append(')');
+            $this->filterBuilder->append(')');
         }
 
-        return $this->complexFilterBuilder;
+        return $this->filterBuilder;
     }
 
     public function substring(int $rightOperand): FilterBuilderHelper {
@@ -260,13 +260,13 @@ class FilterBuilderHelper {
     }
 
     public function length(): FilterBuilderHelper {
-        $this->complexFilterBuilder->append('length(' . $this->leftOperand . ')');
+        $this->filterBuilder->append('length(' . $this->leftOperand . ')');
 
         return $this;
     }
 
     public function not(): FilterBuilderHelper {
-        $this->complexFilterBuilder->append('not (');
+        $this->filterBuilder->append('not (');
         $this->not = true;
         
         return $this;

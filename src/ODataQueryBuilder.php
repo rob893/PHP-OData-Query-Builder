@@ -414,8 +414,8 @@ class ODataQueryBuilder {
         $this->appendSelectsToQuery();
         $this->appendExpandsToQuery();
         $this->appendOrderByToQuery();
-        $this->appendTopToQuery();
         $this->appendSkipToQuery();
+        $this->appendTopToQuery();
         $this->appendCountToQuery();
 
         //remove the ? if the query has no query options.
