@@ -42,12 +42,52 @@ final class ODataQueryBuilderTest extends TestCase {
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People(\'bob\')', $query);
     }
 
+    public function testFromThenFromAndFind() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+        
+        $query = $builder->from('People')->find('bob')->thenFrom('Trips')->find(0)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People(\'bob\')/Trips(0)', $query);
+    }
+
     public function testSimpleFilter() {
         $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
 
         $query = $builder->from('People')->filterWhere('FirstName')->equals('John')->encodeUrl(false)->buildQuery();
 
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'John\'', $query);
+    }
+
+    public function testSimpleFilter2() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('People')->filterWhere('FirstName')->equals('John')->filterWhere('Age')->lessThan(24)->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'John\' and Age lt 24', $query);
+    }
+
+    public function testSimpleFilter3() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('People')->filterWhere('FirstName')->equals('John')->filterWhere('Age')->greaterThan(24)->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'John\' and Age gt 24', $query);
+    }
+
+    public function testSimpleFilter4() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('People')->filterWhere('FirstName')->equals('John')->filterWhere('Age')->greaterThanOrEqual(24)->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'John\' and Age ge 24', $query);
+    }
+
+    public function testSimpleFilter5() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('People')->filterWhere('FirstName')->equals('John')->filterWhere('Age')->lessThanOrEqual(24)->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'John\' and Age le 24', $query);
     }
 
     public function testSimpleOrFilter() {
@@ -58,10 +98,34 @@ final class ODataQueryBuilderTest extends TestCase {
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'John\' or LastName eq \'Smith\'', $query);
     }
 
+    public function testSimpleOrFilter2() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('People')->orFilterWhere('FirstName')->equals('John')->orFilterWhere('LastName')->equals('Smith')->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'John\' or LastName eq \'Smith\'', $query);
+    }
+
+    public function testSimpleOrFilter3() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('Airports')->filterWhere('Location/City/Region')->equals('California')->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/Airports?$filter=Location/City/Region eq \'California\'', $query);
+    }
+
     public function testSimpleAndFilter() {
         $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
 
         $query = $builder->from('People')->filterWhere('FirstName')->equals('John')->andFilterWhere('LastName')->equals('Smith')->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'John\' and LastName eq \'Smith\'', $query);
+    }
+
+    public function testSimpleAndFilter2() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('People')->andFilterWhere('FirstName')->equals('John')->andFilterWhere('LastName')->equals('Smith')->encodeUrl(false)->buildQuery();
 
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'John\' and LastName eq \'Smith\'', $query);
     }
@@ -72,6 +136,14 @@ final class ODataQueryBuilderTest extends TestCase {
         $query = $builder->from('People')->select('FirstName')->encodeUrl(false)->buildQuery();
 
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$select=FirstName', $query);
+    }
+
+    public function testSelect2() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('People')->select('FirstName')->select('LastName ')->select('MiddleName, Age, Address ,  ')->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$select=FirstName,LastName,MiddleName,Age,Address', $query);
     }
 
     public function testSelectCommaDel() {
@@ -85,7 +157,7 @@ final class ODataQueryBuilderTest extends TestCase {
     public function testSelectMultiple() {
         $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
 
-        $query = $builder->from('People')->selectMultiple(['FirstName', 'LastName', 'DateOfBirth'])->encodeUrl(false)->buildQuery();
+        $query = $builder->from('People')->select(['FirstName', 'LastName', 'DateOfBirth'])->encodeUrl(false)->buildQuery();
 
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$select=FirstName,LastName,DateOfBirth', $query);
     }
@@ -172,7 +244,27 @@ final class ODataQueryBuilderTest extends TestCase {
             ->buildQuery();
         
         $this->assertEquals(
-            'http://services.odata.org/V4/TripPinService/People?$filter=contains(toupper(tolower(toupper(tolower(LastName)))),\'JO\') and FirstName eq \'Joe\'',
+            'http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'Joe\' and contains(toupper(tolower(toupper(tolower(LastName)))),\'JO\')',
+            $query
+        );
+    }
+
+    public function testComplex3() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+        
+        $query = $builder->from('People')->filterWhere('FirstName')->equals('Joe')
+            ->filterBuilder()
+                ->where('LastName')->toLower()->toUpper()->toLower()->toUpper()->contains('JO')
+            ->addToQuery()
+            ->filterWhere('LastName')->equals('Smith')
+            ->filterBuilder()
+                ->where('MiddleName')->length()->lessThan(4)
+            ->addToQuery()
+            ->encodeUrl(false)
+            ->buildQuery();
+        
+        $this->assertEquals(
+            'http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'Joe\' and contains(toupper(tolower(toupper(tolower(LastName)))),\'JO\') and LastName eq \'Smith\' and length(MiddleName) lt 4',
             $query
         );
     }

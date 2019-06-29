@@ -19,8 +19,7 @@ class ODataQueryBuilder {
     private $entitySets = [];
     private $entitySetIndex = 0;
     private $filters = [];
-    private $filterStrings = [];
-    private $selectedProperties = '';
+    private $selectedProperties = [];
     private $expands = '';
     private $orderBy = '';
     private $search = '';
@@ -182,43 +181,21 @@ class ODataQueryBuilder {
     public function filterBuilder(): FilterBuilderStart {
         return new FilterBuilderStart(new FilterBuilder($this));
     }
-
+    
     /**
      * Manually add a filter. Used by the filter builder class to support the fluent nature of this library. 
      * Can be used by anyone who does not like the fluent behavior of this library.
-     * 
-     * @example $builder->from('People')->addFilter('FirstName', 'eq', 'Joe', 'and')->buildQuery();
      *
-     * @param string $leftOperand
-     * @param string $operator
-     * @param mixed $rightOperand
-     * @param string $andOr Used to determine logical operator to precede this filter.
+     * @param string $filterString
+     * @param string $prependedAndOr
      * @return ODataQueryBuilder
      */
-    public function addFilter(string $leftOperand, string $operator, $rightOperand, string $andOr): ODataQueryBuilder {
-        if (!$this->isValidOdataOperator($operator)) {
-            throw new \Exception('Invalid OData operator.', 400);
+    public function addFilterString(string $filterString, string $prependedAndOr = 'and'): ODataQueryBuilder {
+        if ($prependedAndOr !== 'and' && $prependedAndOr !== 'or') {
+            throw new \Exception('Invalid andOr parameter. It should be either and or or.', 500);
         }
 
-        if ($andOr !== 'and' && $andOr !== 'or') {
-            throw new \Exception('Invalid andOr parameter. It should be either and or or.', 400);
-        }
-
-        if (is_string($rightOperand)) {
-            $filter = $leftOperand . ' ' . $operator . ' \'' . $rightOperand . '\'';
-        }
-        else {
-            $filter = $leftOperand . ' ' . $operator . ' ' . $rightOperand;
-        }
-        
-        
-        $this->filters[$filter] = $andOr;
-
-        return $this;
-    }
-
-    public function addFilterString(string $filterString): ODataQueryBuilder {
-        $this->filterStrings[] = $filterString;
+        $this->filters[$filterString] = $prependedAndOr;
 
         return $this;
     }
@@ -251,34 +228,33 @@ class ODataQueryBuilder {
 
     /**
      * Select one or many properties to return from the odata service. 
-     * You can specify a single property or multiple by using a comma to separate the properties.
+     * You can specify a single property or multiple by using a comma to separate the properties. You can also pass in an array.
      *  
      * @example builder->from('People')->select('FirstName')->buildQuery(); Will select only the first name property.
      * @example builder->from('People')->select('FirstName,LastName,DateOfBirth')->buildQuery(); Will select FirstName, LastName, and DateOfBirth properties.
+     * @example builder->from('People')->select(['FirstName', 'LastName', 'DateOfBirth'])->buildQuery(); Will select FirstName, LastName, and DateOfBirth properties.
      *
-     * @param string $selectedProperty
+     * @param string|array $selectedProperties
      * @return ODataQueryBuilder
      */
-    public function select(string $selectedProperty): ODataQueryBuilder {
-        if (strlen($this->selectedProperties) > 0) {
-            $this->selectedProperties .= ',';
+    public function select($selectedProperties): ODataQueryBuilder {
+        if (!is_string($selectedProperties) && !is_array($selectedProperties)) {
+            throw new \Exception('$selectedProperties must either be an array or a string.', 500);
+        }
+
+        if (is_string($selectedProperties)) {
+            $selectedProperties = explode(',', $selectedProperties);
         }
         
-        $this->selectedProperties .= $selectedProperty;
+        foreach ($selectedProperties as $selectedProp) {
+            $selectedProp = trim($selectedProp);
 
-        return $this;
-    }
+            if ($selectedProp === '') {
+                continue;
+            }
 
-    /**
-     * Select multiple properties from an entity set using an array instead of a comma separated string.
-     * 
-     * @example $builder->from('People')->selectMultiple(['FirstName', 'LastName', 'DateOfBirth'])->buildQuery();
-     *
-     * @param array $selectedProperties
-     * @return ODataQueryBuilder
-     */
-    public function selectMultiple(array $selectedProperties): ODataQueryBuilder {
-        $this->selectedProperties .= implode(',', $selectedProperties);
+            $this->selectedProperties[] = $selectedProp;
+        }
 
         return $this;
     }
@@ -447,7 +423,7 @@ class ODataQueryBuilder {
     }
 
     private function appendFiltersToQuery() {
-        if (empty($this->filters) && empty($this->filterStrings)) {
+        if (empty($this->filters)) {
             return;
         }
 
@@ -458,14 +434,7 @@ class ODataQueryBuilder {
         $this->queryHasOption = true;
         $this->finalQueryString .= '$filter=';
 
-        //append complex filters
         $hasFilter = false;
-        foreach ($this->filterStrings as $complexFilter) {
-            $hasFilter = true;
-            $this->finalQueryString .= $this->encodeUrl ? urlencode($complexFilter) : $complexFilter;
-        }
-        
-        //append simple filters
         foreach ($this->filters as $filter => $andOr) {
             if ($hasFilter) {
                 $this->finalQueryString .= $this->encodeUrl ? urlencode(' ' . $andOr . ' ' .$filter) : ' ' . $andOr . ' ' .$filter;
@@ -478,7 +447,7 @@ class ODataQueryBuilder {
     }
 
     private function appendSelectsToQuery() {
-        if ($this->selectedProperties === '') {
+        if (empty($this->selectedProperties)) {
             return;
         }
 
@@ -488,7 +457,7 @@ class ODataQueryBuilder {
 
         $this->queryHasOption = true;
         $this->finalQueryString .= '$select=';
-        $this->finalQueryString .= $this->encodeUrl ? urlencode($this->selectedProperties) : $this->selectedProperties;
+        $this->finalQueryString .= $this->encodeUrl ? urlencode(implode(',', $this->selectedProperties)) : implode(',', $this->selectedProperties);
     }
 
     private function appendExpandsToQuery() {

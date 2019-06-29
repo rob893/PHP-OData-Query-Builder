@@ -9,6 +9,7 @@ class FilterBuilder {
 
     private $oDataQueryBuilder;
     private $filterString = '';
+    private $prependedAndOr = 'and';
 
 
     public function __construct(ODataQueryBuilder $queryBuilder) {
@@ -17,6 +18,16 @@ class FilterBuilder {
 
     public function append(string $stringToAppend): FilterBuilder {
         $this->filterString .= $stringToAppend;
+
+        return $this;
+    }
+
+    public function setPrependedAndOr(string $prependedAndOr): FilterBuilder {
+        if ($prependedAndOr !== 'and' && $prependedAndOr !== 'or') {
+            throw new \Exception('Invalid argument. It should either be and or or.', 500);
+        }
+
+        $this->prependedAndOr = $prependedAndOr;
 
         return $this;
     }
@@ -42,13 +53,13 @@ class FilterBuilder {
     public function addToQuery(): ODataQueryBuilder {
         $this->validateFilter();
         
-        $this->oDataQueryBuilder->addFilterString($this->filterString);
+        $this->oDataQueryBuilder->addFilterString($this->filterString, $this->prependedAndOr);
 
         return $this->oDataQueryBuilder;
     }
 
     private function validateFilter() {
-
+        //TODO Implement parentheses checking and stuff.
     }
 }
 
@@ -75,13 +86,13 @@ class FilterBuilderIntermediate {
 class FilterBuilderStart extends FilterBuilderIntermediate {
 
     public function prependAnd(): FilterBuilderIntermediate {
-        $this->filterBuilder->append(' and ');
+        $this->filterBuilder->setPrependedAndOr('and');
 
         return new FilterBuilderIntermediate($this->filterBuilder);
     }
 
     public function prependOr(): FilterBuilderIntermediate {
-        $this->filterBuilder->append(' or ');
+        $this->filterBuilder->setPrependedAndOr('or');
 
         return new FilterBuilderIntermediate($this->filterBuilder);
     }
@@ -260,7 +271,7 @@ class FilterBuilderHelper {
     }
 
     public function length(): FilterBuilderHelper {
-        $this->filterBuilder->append('length(' . $this->leftOperand . ')');
+        $this->leftOperand = 'length(' . $this->leftOperand . ')';
 
         return $this;
     }
@@ -287,37 +298,61 @@ class SimpleFilterBuilder {
     }
 
     public function equals($rightOperand): ODataQueryBuilder {
-        $this->oDataQueryBuilder->addFilter($this->leftOperand, 'eq', $rightOperand, $this->andOr);
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+
+        $this->oDataQueryBuilder->addFilterString($this->leftOperand . ' eq ' . $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
 
     public function notEquals($rightOperand): ODataQueryBuilder {
-        $this->oDataQueryBuilder->addFilter($this->leftOperand, 'ne', $rightOperand, $this->andOr);
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+
+        $this->oDataQueryBuilder->addFilterString($this->leftOperand . ' ne ' . $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
 
     public function greaterThan($rightOperand): ODataQueryBuilder {
-        $this->oDataQueryBuilder->addFilter($this->leftOperand, 'gt', $rightOperand, $this->andOr);
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+
+        $this->oDataQueryBuilder->addFilterString($this->leftOperand . ' gt ' . $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
 
     public function greaterThanOrEqual($rightOperand): ODataQueryBuilder {
-        $this->oDataQueryBuilder->addFilter($this->leftOperand, 'ge', $rightOperand, $this->andOr);
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+
+        $this->oDataQueryBuilder->addFilterString($this->leftOperand . ' ge ' . $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
 
     public function lessThan($rightOperand): ODataQueryBuilder {
-        $this->oDataQueryBuilder->addFilter($this->leftOperand, 'lt', $rightOperand, $this->andOr);
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+
+        $this->oDataQueryBuilder->addFilterString($this->leftOperand . ' lt ' . $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
 
     public function lessThanOrEqual($rightOperand): ODataQueryBuilder {
-        $this->oDataQueryBuilder->addFilter($this->leftOperand, 'le', $rightOperand, $this->andOr);
+        if (is_string($rightOperand)) {
+            $rightOperand = '\'' . $rightOperand . '\'';
+        }
+
+        $this->oDataQueryBuilder->addFilterString($this->leftOperand . ' le ' . $rightOperand, $this->andOr);
         
         return $this->oDataQueryBuilder;
     }
