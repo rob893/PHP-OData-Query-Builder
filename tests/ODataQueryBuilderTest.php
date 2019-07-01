@@ -6,7 +6,7 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use ODataQueryBuilder\ODataQueryBuilder;
-
+use PHPUnit\Framework\MockObject\Stub\Exception;
 
 final class ODataQueryBuilderTest extends TestCase {
 
@@ -267,5 +267,40 @@ final class ODataQueryBuilderTest extends TestCase {
             'http://services.odata.org/V4/TripPinService/People?$filter=FirstName eq \'Joe\' and contains(toupper(tolower(toupper(tolower(LastName)))),\'JO\') and LastName eq \'Smith\' and length(MiddleName) lt 4',
             $query
         );
+    }
+
+    public function testParenValidation() {
+        $this->expectException(\Exception::class);
+
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $builder->from('People')->filterBuilder()
+            ->where('FirstName')->equals('Joe')
+            ->closeParentheses()->addToQuery()
+            ->buildQuery();
+    }
+
+    public function testParenValidation2() {
+        $this->expectException(\Exception::class);
+
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $builder->from('People')->filterBuilder()
+            ->openParentheses()
+                ->where('FirstName')->equals('Joe')
+            ->closeParentheses()->closeParentheses()->addToQuery()
+            ->buildQuery();
+    }
+
+    public function testParenValidation3() {
+        $this->expectException(\Exception::class);
+
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $builder->from('People')->filterBuilder()
+            ->openParentheses()->openParentheses()
+                ->where('FirstName')->equals('Joe')
+            ->closeParentheses()->addToQuery()
+            ->buildQuery();
     }
 }
