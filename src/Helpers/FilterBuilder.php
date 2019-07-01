@@ -59,7 +59,23 @@ class FilterBuilder {
     }
 
     private function validateFilter() {
-        //TODO Implement parentheses checking and stuff.
+        $leftParens = [];
+
+        for ($i = 0; $i < strlen($this->filterString); $i++) {
+            if ($this->filterString[$i] === '(') {
+                array_push($leftParens, '(');
+            }
+            else if ($this->filterString[$i] === ')') {
+                if (empty($leftParens)) {
+                    throw new \Exception('Invalid parentheses.', 500);
+                }
+                array_pop($leftParens);
+            }
+        }
+
+        if (!empty($leftParens)) {
+            throw new \Exception('Invalid parentheses.', 500);
+        }
     }
 }
 
