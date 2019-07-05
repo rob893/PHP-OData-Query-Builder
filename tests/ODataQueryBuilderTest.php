@@ -6,7 +6,7 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use ODataQueryBuilder\ODataQueryBuilder;
-use PHPUnit\Framework\MockObject\Stub\Exception;
+
 
 final class ODataQueryBuilderTest extends TestCase {
 
@@ -42,12 +42,68 @@ final class ODataQueryBuilderTest extends TestCase {
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People(\'bob\')', $query);
     }
 
+    public function testFromAndFindMultiKey() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+        
+        $query = $builder->from('People')->find('FirstName=\'Bob\',LastName=\'Joe\'', true)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People(FirstName=\'Bob\',LastName=\'Joe\')', $query);
+    }
+
     public function testFromThenFromAndFind() {
         $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
         
         $query = $builder->from('People')->find('bob')->thenFrom('Trips')->find(0)->buildQuery();
 
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People(\'bob\')/Trips(0)', $query);
+    }
+
+    public function testExpands() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+        
+        $query = $builder->from('People')->expand('Trips')->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$expand=Trips', $query);
+    }
+
+    public function testExpandArray() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+        
+        $query = $builder->from('People')->expand(['Trips', ' Friends  ', 'Photoes '])->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$expand=Trips,Friends,Photoes', $query);
+    }
+
+    public function testExpands2() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+        
+        $query = $builder->from('People')->expand('Trips')->expand('Friends')->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$expand=Trips,Friends', $query);
+    }
+
+    public function testExpands3() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+        
+        $query = $builder->from('People')->expand('Trips,Friends')->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$expand=Trips,Friends', $query);
+    }
+
+    public function testExpands4() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+        
+        $query = $builder->from('People')->expand('Trips, Friends')->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$expand=Trips,Friends', $query);
+    }
+
+    public function testExpands5() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+        
+        $query = $builder->from('People')->expand('Trips,,,,,   ,,, , ,,, ,, ,, ,, , ,,Friends')->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$expand=Trips,Friends', $query);
     }
 
     public function testSimpleFilter() {
@@ -138,7 +194,15 @@ final class ODataQueryBuilderTest extends TestCase {
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$select=FirstName', $query);
     }
 
-    public function testSelect2() {
+    public function testSelectArray() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('People')->select(['FirstName ', ' LastName ', 'Age'])->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$select=FirstName,LastName,Age', $query);
+    }
+
+    public function testSelectCommaDel() {
         $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
 
         $query = $builder->from('People')->select('FirstName')->select('LastName ')->select('MiddleName, Age, Address ,  ')->encodeUrl(false)->buildQuery();
@@ -146,10 +210,18 @@ final class ODataQueryBuilderTest extends TestCase {
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$select=FirstName,LastName,MiddleName,Age,Address', $query);
     }
 
-    public function testSelectCommaDel() {
+    public function testSelectCommaDel2() {
         $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
 
         $query = $builder->from('People')->select('FirstName,LastName,DateOfBirth')->encodeUrl(false)->buildQuery();
+
+        $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$select=FirstName,LastName,DateOfBirth', $query);
+    }
+
+    public function testSelectCommaDel3() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('People')->select('FirstName,,, ,, , ,, ,, ,, ,, ,, , ,,,, , ,,,,,,,,, LastName,  ,,,  DateOfBirth')->encodeUrl(false)->buildQuery();
 
         $this->assertEquals('http://services.odata.org/V4/TripPinService/People?$select=FirstName,LastName,DateOfBirth', $query);
     }

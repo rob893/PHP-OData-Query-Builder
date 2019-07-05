@@ -20,7 +20,7 @@ class ODataQueryBuilder {
     private $entitySetIndex = 0;
     private $filters = [];
     private $selectedProperties = [];
-    private $expands = '';
+    private $expands = [];
     private $orderBy = '';
     private $search = '';
     private $top = 0;
@@ -119,10 +119,10 @@ class ODataQueryBuilder {
      * @param mixed $entityKey
      * @return ODataQueryBuilder
      */
-    public function find($entityKey): ODataQueryBuilder {
+    public function find($entityKey, bool $multiKey = false): ODataQueryBuilder {
         $entitySetKeys = array_keys($this->entitySets);
 
-        if (is_string($entityKey)) {
+        if (is_string($entityKey) && !$multiKey) {
             $entityKey = '\'' . $entityKey . '\'';
         }
         
@@ -213,15 +213,27 @@ class ODataQueryBuilder {
      * @example $builder->from('People')->expand('Friends')->buildQuery();
      * @example $builder->from('People')->expand('Friends,Trips,Photos')->buildQuery();
      *
-     * @param string $navigationProperty
+     * @param string|string[] $navigationProperties
      * @return ODataQueryBuilder
      */
-    public function expand(string $navigationProperty): ODataQueryBuilder {
-        if (strlen($this->expands) > 0) {
-            $this->expands .= ',';
+    public function expand($navigationProperties): ODataQueryBuilder {
+        if (!is_string($navigationProperties) && !is_array($navigationProperties)) {
+            throw new \Exception('Invalid $navigationProperties argument. It must be an array of strings or a string', 500);
         }
 
-        $this->expands .= $navigationProperty;
+        if (is_string($navigationProperties)) {
+            $navigationProperties = explode(',', $navigationProperties);
+        }
+        
+        foreach ($navigationProperties as $navigationProperty) {
+            $navigationProperty = trim($navigationProperty);
+
+            if ($navigationProperty === '') {
+                continue;
+            }
+            
+            $this->expands[] = $navigationProperty;
+        }
         
         return $this;
     }
@@ -461,7 +473,7 @@ class ODataQueryBuilder {
     }
 
     private function appendExpandsToQuery() {
-        if ($this->expands === '') {
+        if (empty($this->expands)) {
             return;
         }
 
@@ -471,7 +483,7 @@ class ODataQueryBuilder {
 
         $this->queryHasOption = true;
         $this->finalQueryString .= '$expand=';
-        $this->finalQueryString .= $this->encodeUrl ?  urlencode($this->expands) : $this->expands;
+        $this->finalQueryString .= $this->encodeUrl ?  urlencode(implode(',', $this->expands)) : implode(',', $this->expands);
     }
 
     private function appendOrderByToQuery() {
