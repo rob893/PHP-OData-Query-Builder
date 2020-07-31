@@ -1,6 +1,4 @@
 <?php
-// ./vendor/bin/phpunit --bootstrap ./vendor/autoload.php ./tests/ODataQueryBuilderTest.php 
-// Be sure to run composer dump-autoload anytime different files are required or when new classes are added to existing files.
 
 declare(strict_types=1);
 
