@@ -222,9 +222,26 @@ class FilterBuilderHelper {
         return $this->filterBuilder;
     }
 
+    public function in(array $rightOperand): FilterBuilder {
+        $this->filterBuilder->append($this->leftOperand . ' in (');
+
+        $rightOperand = array_map(function ($value) {
+            if (is_string($value)) {
+                return '\'' . $value . '\'';
+            }
+
+            return $value;
+        }, $rightOperand);
+
+        $this->filterBuilder->append(implode(', ', $rightOperand));
+        $this->filterBuilder->append(')');
+
+        return $this->filterBuilder;
+    }
+
     public function endsWith(string $rightOperand): FilterBuilder {
         $rightOperand = '\'' . $rightOperand . '\'';
-        
+
         $this->filterBuilder->append('endswith(' . $this->leftOperand . ',' . $rightOperand . ')');
 
         if ($this->not) {

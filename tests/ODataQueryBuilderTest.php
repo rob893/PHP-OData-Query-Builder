@@ -341,6 +341,25 @@ final class ODataQueryBuilderTest extends TestCase {
         );
     }
 
+    public function testIn() {
+        $builder = new ODataQueryBuilder('http://services.odata.org/V4/TripPinService/');
+
+        $query = $builder->from('People')
+            ->filterBuilder()
+                ->where('LastName')->in(['Smith', 'Whyte'])
+            ->addToQuery()
+            ->filterBuilder()
+                ->where('Age')->in([28, 42]) // Nonsense but tests non-string scalars are not quoted
+            ->addToQuery()
+            ->encodeUrl(false)
+            ->buildQuery();
+
+        $this->assertEquals(
+            'http://services.odata.org/V4/TripPinService/People?$filter=LastName in (\'Smith\', \'Whyte\') and Age in (28, 42)',
+            $query
+        );
+    }
+
     public function testParenValidation() {
         $this->expectException(\Exception::class);
 
