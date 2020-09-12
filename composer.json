@@ -1,6 +1,5 @@
 {
     "name": "rherb/php-odata-query-builder",
-    "version": "0.1.0",
     "description": "OData Query Builder for PHP",
     "keywords": ["odata", "rest", "php"],
     "homepage": "https://github.com/rob893/PHP-OData-Query-Builder",
@@ -13,14 +12,14 @@
         }
     ],
     "require": {
-        "php": ">=7.0"
+        "php": "^7.0"
     },
     "autoload": {
-        "classmap": [
-            "src/"
-        ]
+        "psr-4": {
+            "ODataQueryBuilder\\": "src"
+        }
     },
     "require-dev": {
-        "phpunit/phpunit": "^6"
+        "phpunit/phpunit": "^6.0"
     }
 }
