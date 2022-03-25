@@ -1,5 +1,5 @@
 {
-  "name": "rherb/php-odata-query-builder",
+  "name": "ikoncept/php-odata-query-builder",
   "description": "OData Query Builder for PHP",
   "keywords": [
     "odata",
@@ -11,7 +11,7 @@
       "phpunit"
     ]
   },
-  "homepage": "https://github.com/rob893/PHP-OData-Query-Builder",
+  "homepage": "https://github.com/ikoncept/PHP-OData-Query-Builder",
   "type": "library",
   "license": "MIT",
   "authors": [
